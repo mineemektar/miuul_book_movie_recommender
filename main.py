@@ -85,7 +85,12 @@ with book_tab:
         if category == "All":
             random_books = books_data.iloc[:1000].sample(n=5)
         else:
-            random_books = books_data[books_data['categories'] == category].sample(n=5)
+            category_books = books_data[books_data['categories'] == category]
+            if len(category_books) < 5:
+                st.warning(f"Sorry, this is all we got in the '{category}' category. You have a unique taste in books I must say ;)")
+                random_books = category_books  # Show whatever books are available
+            else:
+                random_books = category_books.sample(n=5)
         
         with recommendations_placeholder.container():
             st.markdown("### Random Book Recommendations")

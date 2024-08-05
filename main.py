@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from scrape import get_image_from_imdb
+import ast
 
 st.set_page_config(layout='wide', page_title='Book & Movie Recommender', page_icon='🎥')
 
@@ -15,14 +16,14 @@ def get_data():
     movie_recommendations_data2[['Film1', 'Film2']] = movie_recommendations_data2['Film Pair'].apply(eval).apply(pd.Series)
     movie_data = pd.read_excel('data/movies.xlsx')
     book_to_film_data = pd.read_excel('data/book_to_film_recommendations.xlsx')
-    return recommendations_data, books_data, book_recommendations_data2, movie_recommendations_data, movie_recommendations_data2, movie_data, book_to_film_data
+    movie_to_book_data = pd.read_excel('data/movie_to_book_recommendations.xlsx')
+    return recommendations_data, books_data, book_recommendations_data2, movie_recommendations_data, movie_recommendations_data2, movie_data, book_to_film_data, movie_to_book_data
 
-recommendations_data, books_data, book_recommendations_data2, movie_recommendations_data, movie_recommendations_data2, movie_data, book_to_film_data = get_data()
-
+recommendations_data, books_data, book_recommendations_data2, movie_recommendations_data, movie_recommendations_data2, movie_data, book_to_film_data, movie_to_book_data = get_data()
 
 st.title(':blue[Book] & :red[Movie] Recommender 📚🎬')
 
-home_tab, book_tab, book2_tab, movie_tab, movie2_tab, mix_tab, panda_tab = st.tabs(["Homepage", "Book📖", "BFF's💞", "Movie🎥", "Movie Night💜", "Mix", "Nothing🐼"])
+home_tab, book_tab, book2_tab, movie_tab, movie2_tab, mix_tab, panda_tab = st.tabs(["Homepage", "Book📖", "BFF's💞", "Movie🎥", "Movie Night💜", "Mix⚔️", "Nothing🐼"])
 
 # Home tab
 with home_tab:
@@ -62,7 +63,7 @@ with book_tab:
 
     if recommend_button:
         recommendations = recommendations_data.loc[recommendations_data['Book Name'] == selected_book, 'Recommendations'].values[0]
-        recommendation_list = recommendations.strip("[]").replace("'", "").split(", ")
+        recommendation_list = ast.literal_eval(recommendations)
         
         with recommendations_placeholder.container():
             st.markdown("### Recommendations based on your selection")
@@ -80,6 +81,8 @@ with book_tab:
                         else:
                             st.image("https://via.placeholder.com/500x500.png?text=G%C3%B6rsel%20Bulunamad%C4%B1", width=150)
                         st.markdown(f"**{title}** by {author}")
+                else:
+                    st.error(f"Book '{recommendation}' not found in the dataset.")
 
     if random_button:
         if category == "All":
@@ -88,7 +91,7 @@ with book_tab:
             category_books = books_data[books_data['categories'] == category]
             if len(category_books) < 5:
                 st.warning(f"Sorry, this is all we got in the '{category}' category. You have a unique taste in books I must say ;)")
-                random_books = category_books  # Show whatever books are available
+                random_books = category_books 
             else:
                 random_books = category_books.sample(n=5)
         
@@ -125,7 +128,7 @@ with book2_tab:
         
         if not row.empty:
             recommendations = row.iloc[0]['Recommendations']
-            recommendation_list = recommendations.strip("[]").replace("'", "").split(", ")
+            recommendation_list = ast.literal_eval(recommendations)
             
             st.markdown("### Recommendations")
             cols = st.columns(len(recommendation_list)) 
@@ -167,7 +170,7 @@ with movie_tab:
 
     if recommend_button:
         recommendations = movie_recommendations_data.loc[movie_recommendations_data['Film_title'] == selected_movie, 'Recommended Films'].values[0]
-        recommendation_list = recommendations.strip("[]").replace("'", "").split(", ")
+        recommendation_list = ast.literal_eval(recommendations)
         
         with recommendations_placeholder.container():
             st.markdown("### Recommendations based on your selection")
@@ -225,7 +228,7 @@ with movie2_tab:
         
         if not row.empty:
             recommendations = row.iloc[0]['Recommendations']
-            recommendation_list = recommendations.strip("[]").replace("'", "").split(", ")
+            recommendation_list = ast.literal_eval(recommendations)
             
             st.markdown("### Recommendations")
             cols = st.columns(len(recommendation_list)) 
@@ -237,24 +240,35 @@ with movie2_tab:
                     img_url = get_image_from_imdb(path)
 
                     with cols[idx]:  # Place each recommendation in its own column
-                        st.image(img_url, width=150)
+                        if img_url:
+                            st.image(img_url, width=150)
+                        else:
+                            st.image("https://via.placeholder.com/500x500.png?text=G%C3%B6rsel%20Bulunamad%C4%B1", width=150)
                         st.markdown(f"**{title}**")
 
 # Mix tab
 with mix_tab:
-    st.subheader("*Get movie recommendations based on your book selection.*")
+    st.subheader("*You can get movie recommendations based on your book selection and you can get book recommendations based on your movie selection.*")
+    
+    left_col, right_col = st.columns(2)
 
-    # Create a column for book selection
-    book_names = book_to_film_data['Books'].unique()
-    selected_book = st.selectbox("Choose a book", options=book_names)
-    recommend_button = st.button("Recommend Moviess")
+    with left_col:
+        st.subheader("Book to Movie Recommendations")
+        book_names = book_to_film_data['Books'].unique()
+        selected_book = st.selectbox("Choose a book", options=book_names)
+        recommend_book_button = st.button("Recommend Some Movies")
 
-    # Create a placeholder for the recommendations to be displayed
+    with right_col:
+        st.subheader("Movie to Book Recommendations")
+        movie_names = movie_to_book_data['Movie Title'].unique()
+        selected_movie = st.selectbox("Choose a movie", options=movie_names)
+        recommend_movie_button = st.button("Recommend Some Books")
+
     recommendations_placeholder = st.empty()
 
-    if recommend_button:
+    if recommend_book_button:
         recommendations = book_to_film_data.loc[book_to_film_data['Books'] == selected_book, 'Recommended Films'].values[0]
-        recommendation_list = recommendations.strip("[]").replace("'", "").split(", ")
+        recommendation_list = ast.literal_eval(recommendations)
         
         with recommendations_placeholder.container():
             st.markdown("### Movie Recommendations based on your selected book")
@@ -272,6 +286,27 @@ with mix_tab:
                         else:
                             st.image("https://via.placeholder.com/500x500.png?text=G%C3%B6rsel%20Bulunamad%C4%B1", width=150)
                         st.markdown(f"**{title}**")
+
+    if recommend_movie_button:
+        recommendations = movie_to_book_data.loc[movie_to_book_data['Movie Title'] == selected_movie, 'Book Recommendations'].values[0]
+        recommendation_list = ast.literal_eval(recommendations)
+        
+        with recommendations_placeholder.container():
+            st.markdown("### Book Recommendations based on your selected movie")
+            cols = st.columns(len(recommendation_list)) 
+            for idx, recommendation in enumerate(recommendation_list):
+                recommended_book = books_data[books_data['Book Name'] == recommendation]
+                if not recommended_book.empty:
+                    title = recommended_book['Book Name'].values[0]
+                    author = recommended_book.authors.values[0]
+                    img_url = recommended_book.thumbnail.values[0]
+
+                    with cols[idx]:  # Place each recommendation in its own column
+                        if pd.notnull(img_url):  # Check if img_url is not None or NaN
+                            st.image(img_url, width=150)
+                        else:
+                            st.image("https://via.placeholder.com/500x500.png?text=G%C3%B6rsel%20Bulunamad%C4%B1", width=150)
+                        st.markdown(f"**{title}** by {author}")
 
 # Nothing tab
 with panda_tab:

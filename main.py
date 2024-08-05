@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from scrape import get_image_from_imdb
 
 st.set_page_config(layout='wide', page_title='Book & Movie Recommender', page_icon='🎥')
